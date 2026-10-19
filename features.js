@@ -246,7 +246,7 @@ function individualReport(){
 function stat(title,value,detail){return '<div class="card kpi"><div class="k">'+esc(title)+'</div><div class="num">'+esc(value)+'</div><div class="foot">'+esc(detail)+'</div></div>';}
 async function openWrong(id){
  const q=API.question(id),b=await API.imageBlob(id);
- if(!b)return toast('找不到 '+id+' 的題圖；請重新匯入 v5 題庫。',true);
+ if(!b)return toast('找不到 '+id+' 的題圖；請重新匯入國文256題題庫ZIP。',true);
  const dlg=$('wrongDialog');const url=URL.createObjectURL(b);
  dlg.querySelector('.wrong-preview-title').textContent=id+'｜'+(q?.teacher_category_label||q?.primary_topic||'');
  const img=dlg.querySelector('img');img.src=url;img.onload=()=>URL.revokeObjectURL(url);
