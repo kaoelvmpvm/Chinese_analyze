@@ -127,7 +127,7 @@ function selectionSummary(p){
  return '新增原題 '+r.previouslyUnseen+' 題｜補弱類別 '+r.intentCounts.repair+' 題｜探索 '+r.intentCounts.explore+' 題｜維持 '+r.intentCounts.review+' 題｜近期重複 '+r.recentRepeatCount+' 題'+(r.weakTopics?.length?'｜曾失分類別：'+r.weakTopics.map(topicName).join('、'):'｜尚無已登記失分考點')+(r.relaxedProtection?'（因候選題不足已放寬重複限制）':'');
 }
 function makePaper(){
- if(!catalog||state.packVersion!==ASSET_VERSION)return notify('請先在「設定與備份」匯入新版 v5 教師分類的256題完整題圖包。',true);
+ if(!catalog||state.packVersion!==ASSET_VERSION)return notify('請先在「設定與備份」匯入國文第四至六課的256題題庫 ZIP。',true);
  var count=parseInt(val('paperCount'),10),minutes=parseInt(val('paperMinutes'),10),trainingDate=val('paperDate'),mode=val('paperMode'),student=mode==='individual'?val('paperStudent'):'';
  var topics=Array.from(document.querySelectorAll('#paperTopics input:checked')).map(function(x){return x.value;});
  if(!topics.length)return notify('請至少勾選一個考點。',true);
@@ -145,8 +145,8 @@ function paperList(){
 async function renderPreview(){
  var token=++previewToken,p=paperOf(selectedPaperId);
  $('printPaper').disabled=!p||state.packVersion!==ASSET_VERSION;$('downloadAnswers').disabled=!p;
- if(!p){$('paperPreview').innerHTML=empty('尚未選擇考卷','出卷後會顯示題圖。');$('paperSelectedLabel').textContent='尚未選擇考卷';return;}if(state.packVersion!==ASSET_VERSION){$('paperPreview').innerHTML=empty('請重新匯入 國文題庫 ZIP','舊版 PDF 切圖可能裁掉根式或分數上緣；匯入新版前暫停顯示與列印。');$('paperSelectedLabel').textContent=p.title;return;}
- $('paperSelectedLabel').textContent=p.title+'｜'+(p.trainingDate||String(p.date||'').slice(0,10))+'｜'+p.questionIds.length+'題｜'+p.minutes+'分鐘';if($('selectionExplanation')){$('selectionExplanation').className='notice'+(p.selectionReport?.relaxedProtection?' warn':'');$('selectionExplanation').textContent=selectionSummary(p)+'。補弱依九大教師分類，不代表已辨識相同國文概念的變化題。';}
+ if(!p){$('paperPreview').innerHTML=empty('尚未選擇考卷','出卷後會顯示題圖。');$('paperSelectedLabel').textContent='尚未選擇考卷';return;}if(state.packVersion!==ASSET_VERSION){$('paperPreview').innerHTML=empty('請重新匯入 國文題庫 ZIP','請匯入與此版本相符的國文256題題庫ZIP，才能顯示與列印。');$('paperSelectedLabel').textContent=p.title;return;}
+ $('paperSelectedLabel').textContent=p.title+'｜'+(p.trainingDate||String(p.date||'').slice(0,10))+'｜'+p.questionIds.length+'題｜'+p.minutes+'分鐘';if($('selectionExplanation')){$('selectionExplanation').className='notice'+(p.selectionReport?.relaxedProtection?' warn':'');$('selectionExplanation').textContent=selectionSummary(p)+'。補弱依六個題組，不能推定已辨識相同細部語文技能的變化題。';}
  $('paperPreview').innerHTML='<p class="hint">正在載入來源題圖……</p>';
  var texts=[];
  for(var i=0;i<p.questionIds.length;i++){
@@ -248,7 +248,7 @@ async function importZip(file){
  if(!window.JSZip)throw Error('ZIP 解壓元件載入失敗，請確認網路可連線後重新整理。');
  var progress=$('importProgress');progress.textContent='正在讀取 ZIP……';
  var zip=await window.JSZip.loadAsync(file);var item=zip.file('catalog.json');if(!item)throw Error('缺少 catalog.json，請選擇專用的256題題圖包。');
- var data=JSON.parse(await item.async('string'));if(data.metadata?.asset_version!==ASSET_VERSION)throw Error('此為舊版題圖包，容易截斷根式／分式。請下載並選擇 國文題庫 ZIP。');if(data.questions.length!==256)throw Error('題庫預期256題，實際'+data.questions.length+'題。');
+ var data=JSON.parse(await item.async('string'));if(data.metadata?.asset_version!==ASSET_VERSION)throw Error('題庫版本不符。請使用國文第四至六課的256題題庫 ZIP。');if(data.questions.length!==256)throw Error('題庫預期256題，實際'+data.questions.length+'題。');
  var ids=data.questions.map(function(q){return q.question_id;});if(ids.some(function(id){return !zip.file('cards/'+id+'.webp');}))throw Error('ZIP 內缺少部分原始題圖，請勿匯入不完整版本。');
  // Validate metadata first, but only activate when all images have been saved.
  var codes=new Set(TOPICS.map(function(t){return t[0];}));if(ids.some(function(id,i){return !id||(!codes.has(data.questions[i].primary_topic_code)&&data.questions[i].primary_topic_code!=='O');}))throw Error('分類代碼含未知值，請檢查索引。');
@@ -258,7 +258,7 @@ async function importZip(file){
  }
  progress.textContent='正在保存256張題圖至本機……';
  var database=await db();await new Promise(function(resolve,reject){var tx=database.transaction('cards','readwrite'),store=tx.objectStore('cards');files.forEach(function(row){store.put(row[1],row[0]);});tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error||Error('存入題圖失敗'));};tx.onabort=function(){reject(tx.error||Error('題庫交易取消'));};});
- Object.values(imageUrls).forEach(function(url){URL.revokeObjectURL(url);});imageUrls={};applyCatalog(data,true);state.packVersion=ASSET_VERSION;save();progress.textContent='v5 題庫匯入完成：教師核定的六個題組已生效。';notify('已匯入新版 v5：256題及六個題組。');refreshAll();
+ Object.values(imageUrls).forEach(function(url){URL.revokeObjectURL(url);});imageUrls={};applyCatalog(data,true);state.packVersion=ASSET_VERSION;save();progress.textContent='國文題庫匯入完成：第四至六課六個題組已生效。';notify('已匯入國文題庫：256題與六個題組。');refreshAll();
 }
 function exportBackup(){var data={format:'chinese-analyze-records-v1',exported_at:new Date().toISOString(),state:state};download('ChineseAnalyze_教師紀錄備份_'+new Date().toISOString().slice(0,10)+'.json','application/json;charset=utf-8',JSON.stringify(data,null,2));notify('已下載備份。題圖需另外保留原始 ZIP。');}
 function importBackupFile(file){
